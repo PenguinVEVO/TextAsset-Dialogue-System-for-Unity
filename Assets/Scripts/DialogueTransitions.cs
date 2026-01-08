@@ -4,13 +4,13 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Mitchel.DialogueSystem
+namespace ThrowLab.Systems.UI
 {
     public class DialogueTransitions : MonoBehaviour
     {
         public static event Action SpriteFadeInFinish;
         public static event Action SpriteFadeOutFinish;
-        
+
         [Header("Transition In Effect Settings")]
         [SerializeField] private AnimationCurve panelSlideInCurve;
         [SerializeField] private float panelSlideInAmount;
@@ -20,17 +20,17 @@ namespace Mitchel.DialogueSystem
         [SerializeField] private float npcSpriteInDelay;
         [SerializeField] private float spriteSlideInAmount;
         [SerializeField] private float spriteFadeInTime;
-        [Space(5)] 
+        [Space(5)]
         [SerializeField] private AnimationCurve headerPanelSlideInCurve;
         [SerializeField] private float headerPanelSlideInAmount;
 
-        [Header("Transition Out Effect Settings")] 
+        [Header("Transition Out Effect Settings")]
         [SerializeField] private float panelFadeOutTime;
         [Space(5)]
         [SerializeField] private float npcSpriteOutDelay;
         [SerializeField] private float spriteFadeOutTime;
 
-        [Header("Character Change Transition Settings")] 
+        [Header("Character Change Transition Settings")]
         [SerializeField] private float characterFadeOutTime;
         [Space(5)]
         private float rightHorizontalPanelTransform;
@@ -44,14 +44,14 @@ namespace Mitchel.DialogueSystem
         private float rightHorizontalPromptTransform;
         [SerializeField] private float leftHorizontalPromptShift;
 
-        [Header("Object References")] 
+        [Header("Object References")]
         [SerializeField] private RectTransform dialoguePanel;
         [SerializeField] private RectTransform dialogueHeaderPanel;
         [SerializeField] private TextMeshProUGUI dialogueHeaderText;
         [SerializeField] private TextMeshProUGUI dialogueText;
         [SerializeField] private Image primarySprite;
         [SerializeField] private Image promptImage;
-        
+
         [HideInInspector] public bool MainCharacterSide = false;
         [HideInInspector] public bool ReadyToProceed = false;
         [HideInInspector] public Sprite QueuedSprite;
@@ -66,7 +66,7 @@ namespace Mitchel.DialogueSystem
         private Color transparentTextColour;
         private Color opaqueHeaderPanelColour;
         private Color transparentHeaderPanelColour;
-        
+
         // =========== Private object reference variables ===========
         private DialogueSystem dialogueSys;
         private Image dialoguePanelImage;
@@ -78,10 +78,10 @@ namespace Mitchel.DialogueSystem
             dialogueSys = GetComponent<DialogueSystem>();
             dialoguePanelImage = dialoguePanel.gameObject.GetComponent<Image>();
             dialogueHeaderPanelImage = dialogueHeaderPanel.gameObject.GetComponent<Image>();
-            
+
             // Colour assignment
             opaqueTestSpriteColour = primarySprite.color;
-            transparentTestSpriteColour = 
+            transparentTestSpriteColour =
                 new Color(primarySprite.color.r, primarySprite.color.g, primarySprite.color.b, 0);
             opaqueTextColour = dialogueHeaderText.color;
             transparentTextColour =
@@ -93,7 +93,7 @@ namespace Mitchel.DialogueSystem
             rightHorizontalTextTransform = dialogueText.rectTransform.localPosition.x;
             rightHorizontalPromptTransform = promptImage.rectTransform.localPosition.x;
         }
-        
+
         public void EnterDialogue()
         {
             dialoguePanel.gameObject.SetActive(true);
@@ -126,8 +126,8 @@ namespace Mitchel.DialogueSystem
             opaquePanelColour = CurrentColour;
             transparentPanelColour = new Color(CurrentColour.r, CurrentColour.g, CurrentColour.b, 0);
             opaqueHeaderPanelColour = CurrentHeaderColour;
-            transparentHeaderPanelColour = 
-                new Color(CurrentHeaderColour.r, CurrentHeaderColour.g, 
+            transparentHeaderPanelColour =
+                new Color(CurrentHeaderColour.r, CurrentHeaderColour.g,
                     CurrentHeaderColour.b, 0);
             dialoguePanelImage.color = transparentPanelColour;
 
@@ -144,12 +144,12 @@ namespace Mitchel.DialogueSystem
                     dialoguePanel.localPosition.y, dialoguePanel.localPosition.z);
                 newPanelPos = new Vector3(panelShift,
                     dialoguePanel.localPosition.y, dialoguePanel.localPosition.z);
-                
+
                 // Set the left-side position for the text
                 var textPos = dialogueText.transform.localPosition;
                 textPos.x = textShift;
                 dialogueText.transform.localPosition = textPos;
-                
+
                 // Set the left-side position for the prompt image
                 var promptPos = promptImage.transform.localPosition;
                 promptPos.x = promptShift;
@@ -162,19 +162,19 @@ namespace Mitchel.DialogueSystem
                     dialoguePanel.localPosition.y, dialoguePanel.localPosition.z);
                 newPanelPos = new Vector3(rightHorizontalPanelTransform,
                     dialoguePanel.localPosition.y, dialoguePanel.localPosition.z);
-                
+
                 // Set the right-side position for the text (in case it isn't already set)
                 var textPos = dialogueText.transform.localPosition;
                 textPos.x = rightHorizontalTextTransform;
                 dialogueText.transform.localPosition = textPos;
-                
+
                 // Set the right-side position for the prompt image
                 var promptPos = promptImage.transform.localPosition;
                 promptPos.x = rightHorizontalPromptTransform;
                 promptImage.transform.localPosition = promptPos;
             }
             dialoguePanel.localPosition = oldPanelPos;
-            
+
             while (timeElapsed < endTime)
             {
                 // Fade effect
@@ -182,11 +182,11 @@ namespace Mitchel.DialogueSystem
                 {
                     dialoguePanelImage.color = Color.Lerp(transparentPanelColour, opaquePanelColour, timeElapsed / panelFadeInTime);
                 }
-                
+
                 // Slide in effect
                 dialoguePanel.localPosition =
                     Vector3.Lerp(oldPanelPos, newPanelPos, panelSlideInCurve.Evaluate(timeElapsed));
-                
+
                 timeElapsed += Time.deltaTime;
                 yield return null;
             }
@@ -218,7 +218,7 @@ namespace Mitchel.DialogueSystem
                     spriteTransform.localPosition.y, spriteTransform.localPosition.z);
                 newSpritePos = new Vector3(spriteShift,
                     spriteTransform.localPosition.y, spriteTransform.localPosition.z);
-                
+
                 // Set the slide in values for the right-side header panel
                 oldHeaderPanelPos = new Vector3(headerPanelShift - headerPanelSlideInAmount,
                     dialogueHeaderPanel.localPosition.y, dialogueHeaderPanel.localPosition.z);
@@ -232,7 +232,7 @@ namespace Mitchel.DialogueSystem
                     spriteTransform.localPosition.y, spriteTransform.localPosition.z);
                 newSpritePos = new Vector3(rightHorizontalCharacterSpriteTransform,
                     spriteTransform.localPosition.y, spriteTransform.localPosition.z);
-                
+
                 // Set the slide in values for the right-side header panel
                 oldHeaderPanelPos = new Vector3(rightHorizontalHeaderPanelTransform + headerPanelSlideInAmount,
                     dialogueHeaderPanel.localPosition.y, dialogueHeaderPanel.localPosition.z);
@@ -242,7 +242,7 @@ namespace Mitchel.DialogueSystem
             spriteTransform.localPosition = oldSpritePos;
             //dialogueHeaderPanel.localPosition = oldHeaderPanelPos;
             dialogueHeaderPanel.localPosition = new Vector3(0, dialogueHeaderPanel.localPosition.y, dialogueHeaderPanel.localPosition.z);
-            
+
             // Initialising all the fade in stuff
             primarySprite.color = transparentTestSpriteColour;
             dialogueHeaderPanelImage.color = transparentHeaderPanelColour;
@@ -267,7 +267,7 @@ namespace Mitchel.DialogueSystem
                     Vector3.Lerp(oldSpritePos, newSpritePos, spriteSlideInCurve.Evaluate(timeElapsed));
                 dialogueHeaderPanel.localPosition = Vector3.Lerp(oldHeaderPanelPos, newHeaderPanelPos,
                     headerPanelSlideInCurve.Evaluate(timeElapsed));
-                
+
                 timeElapsed += Time.deltaTime;
                 yield return null;
             }
@@ -284,7 +284,7 @@ namespace Mitchel.DialogueSystem
         {
             //Debug.Log("Begin panel transition out");
             float timeElapsed = 0;
-            
+
             // Initialise all the colour stuff
             opaquePanelColour = dialoguePanelImage.color;
             transparentPanelColour = new Color(dialoguePanelImage.color.r, dialoguePanelImage.color.g,
@@ -300,7 +300,7 @@ namespace Mitchel.DialogueSystem
                 timeElapsed += Time.deltaTime;
                 yield return null;
             }
-            
+
             dialoguePanelImage.color = transparentPanelColour;
             //Debug.Log("Panel transition out is done.");
         }
@@ -312,12 +312,12 @@ namespace Mitchel.DialogueSystem
             dialogueHeaderText.text = "";
 
             yield return new WaitForSeconds(npcSpriteOutDelay);
-            
+
             // Initialise all the colour stuff
             opaqueHeaderPanelColour = dialogueHeaderPanelImage.color;
             transparentHeaderPanelColour = new Color(dialogueHeaderPanelImage.color.r, dialogueHeaderPanelImage.color.g,
                 dialogueHeaderPanelImage.color.b, 0);
-            
+
             while (timeElapsed < spriteFadeOutTime)
             {
                 primarySprite.color = Color.Lerp(opaqueTestSpriteColour, transparentTestSpriteColour,
@@ -361,7 +361,7 @@ namespace Mitchel.DialogueSystem
             }
             primarySprite.color = transparentTestSpriteColour;
             primarySprite.sprite = QueuedSprite;
-            
+
             // Initialising the slide in stuff
             RectTransform spriteTransform = primarySprite.GetComponent<RectTransform>();
             Vector3 oldSpritePos;
@@ -382,7 +382,7 @@ namespace Mitchel.DialogueSystem
                     spriteTransform.localPosition.y, spriteTransform.localPosition.z);
                 newSpritePos = new Vector3(spriteShift,
                     spriteTransform.localPosition.y, spriteTransform.localPosition.z);
-                
+
                 // Set the slide in values for the left-side panel
                 oldPanelPos = dialoguePanel.localPosition;
                 newPanelPos = new Vector3(panelShift, dialoguePanel.localPosition.y,
@@ -392,15 +392,15 @@ namespace Mitchel.DialogueSystem
                 oldHeaderPanelPos = dialogueHeaderPanel.localPosition;
                 newHeaderPanelPos = new Vector3(headerPanelShift,
                     dialogueHeaderPanel.localPosition.y, dialogueHeaderPanel.localPosition.z);
-                
+
                 // Set the right-side position for the text (in case it isn't already set)
                 var textPos = dialogueText.transform.localPosition;
                 textPos.x = textShift;
                 dialogueText.transform.localPosition = textPos;
-                
+
                 // Set the right-side position for the prompt image
                 var promptPos = promptImage.transform.localPosition;
-                promptPos.x = promptShift; 
+                promptPos.x = promptShift;
                 promptImage.transform.localPosition = promptPos;
             }
             else
@@ -410,7 +410,7 @@ namespace Mitchel.DialogueSystem
                     spriteTransform.localPosition.y, spriteTransform.localPosition.z);
                 newSpritePos = new Vector3(rightHorizontalCharacterSpriteTransform,
                     spriteTransform.localPosition.y, spriteTransform.localPosition.z);
-                
+
                 // Set the slide in values for the right panel
                 oldPanelPos = dialoguePanel.localPosition;
                 newPanelPos = new Vector3(rightHorizontalPanelTransform, dialoguePanel.localPosition.y,
@@ -420,22 +420,22 @@ namespace Mitchel.DialogueSystem
                 oldHeaderPanelPos = dialogueHeaderPanel.localPosition;
                 newHeaderPanelPos = new Vector3(rightHorizontalHeaderPanelTransform,
                     dialogueHeaderPanel.localPosition.y, dialogueHeaderPanel.localPosition.z);
-                
+
                 // Set the left-side position for the text
                 var textPos = dialogueText.transform.localPosition;
                 textPos.x = rightHorizontalTextTransform;
                 dialogueText.transform.localPosition = textPos;
-                
+
                 // Set the left-side position for the prompt image
                 var promptPos = promptImage.transform.localPosition;
                 promptPos.x = rightHorizontalPromptTransform;
                 promptImage.transform.localPosition = promptPos;
             }
-            
+
             spriteTransform.localPosition = oldSpritePos;
             timeElapsed = 0;
             float panelEndTime = panelSlideInCurve.keys[panelSlideInCurve.length - 1].time;
-            
+
             while (timeElapsed < endTime)
             {
                 if (timeElapsed < panelEndTime)

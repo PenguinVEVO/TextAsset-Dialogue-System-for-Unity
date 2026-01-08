@@ -1,74 +1,132 @@
+//   TextAsset Dialogue System
+//   By ThrowLab Games
+//   November 2024
+
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-namespace Mitchel.DialogueSystem
+namespace ThrowLab.Systems.UI
 {
     public class DialogueSystem : MonoBehaviour
     {
-        /// <summary>
-        /// TEXTASSET DIALOGUE SYSTEM FOR UNITY
-        /// Please note that
-        /// </summary>
-        [Header("General Settings")]
-        public float CharDelayTime;
-        [SerializeField] private bool pauseAtFullStop;
+        /* =================[#]  CONFIGURATION  [#]================= */
+
+        [Header("Character Print Settings")]
+        [SerializeField] private PrintSpeeds defaultPrintSpeed = PrintSpeeds.Normal;
+        [SerializeField, Range(0.001f, 1f)] private float verySlowPrintSpeed;
+        [SerializeField, Range(0.001f, 1f)] private float slowPrintSpeed;
+        [SerializeField, Range(0.001f, 1f)] private float normalPrintSpeed;
+        [SerializeField, Range(0.001f, 1f)] private float fastPrintSpeed;
+        [SerializeField, Range(0.001f, 1f)] private float veryFastPrintSpeed;
+        [Space(5)]
         [SerializeField] private float fullStopPauseTime;
-        [SerializeField] private bool pauseAtComma;
         [SerializeField] private float commaPauseTime;
+        [SerializeField] private bool pauseAtFullStop;
+        [SerializeField] private bool pauseAtComma;
 
         [Header("Audio Settings")]
-        public AudioClip DialogueCharSfx;
-        public AudioClip DialogueProceedSfx;
+        [SerializeField] private AudioClip dialogueCharSfx;
+        [SerializeField] private AudioClip dialogueProceedSfx;
         [SerializeField] private bool isFixedSfxTiming;
         [SerializeField] private float fixedSfxTiming;
 
-        [Header("Object References")]
-        public Image dialogueCharacterImage;
-        public TextMeshProUGUI dialogueHeader;
+        [Header("Dependencies")]
+        [SerializeField] private Image dialogueCharacterImage;
+        [SerializeField] private TextMeshProUGUI dialogueHeader;
         [SerializeField] private TextMeshProUGUI dialogueText;
         [SerializeField] private Image dialoguePromptImage;
         [SerializeField] private AudioSource dialogueSfxSource;
 
-        // =============== Internal value variables ===============
-        [HideInInspector] public bool GoodToGo;
-        [HideInInspector] public float OriginalCharDelayTime;
-        [HideInInspector] public bool DialogueEngaged = false;
-        
+        /* =================[#]  INTERNAL VARIABLES/DEPENDENCIES  [#]================= */
+
+        // Enums
+        public enum PrintSpeeds { VerySlow, Slow, Normal, Fast, VeryFast };
+
+        // Component dependencies
+        private DialogueTransitions dialogueTransitions;
+        private DialogueUtils dialogueUtils;
+
+        // Internal values
         private List<string> dialogueLines;
-        private bool isPrinting;
-        private bool skipCheck;
         private int lineIteration = 0;
         private int lineCharIndex = 0;
-        
-        private static DialogueSystem instance;
+        private PrintSpeeds currentPrintSpeedSetting = PrintSpeeds.Normal;
 
-        // =========== Internal object reference variables ===========
-        public DialogueTransitions dialogueTransitions;
-        [SerializeField] private DialogueUtils dialogueUtils;
+        // Internal flags
+        private bool isEngaged = false;
+        private bool isPrinting = false;
+        private bool isHalted = false;
+        private bool skipCheck;
 
-        private void Start()
+        /* =================[#]  ACCESSORS/EVENT HOOKS  [#]================= */
+
+        public static DialogueSystem Instance { get; private set; }
+        /// <summary>
+        /// The current dialogue print speed. Set the speed using 
+        /// </summary>
+        public float CurrentPrintSpeed
         {
-            dialogueUtils = GetComponent<DialogueUtils>();
-            dialogueTransitions = GetComponent<DialogueTransitions>();
-
-            OriginalCharDelayTime = CharDelayTime;
+            get
+            {
+                switch (currentPrintSpeedSetting)
+                {
+                    case PrintSpeeds.VerySlow:
+                        return verySlowPrintSpeed;
+                    case PrintSpeeds.Slow:
+                        return slowPrintSpeed;
+                    case PrintSpeeds.Normal:
+                        return normalPrintSpeed;
+                    case PrintSpeeds.Fast:
+                        return fastPrintSpeed;
+                    case PrintSpeeds.VeryFast:
+                        return veryFastPrintSpeed;
+                    default:
+                        goto case PrintSpeeds.Normal;
+                }
+            }
         }
-        
-        // Create a singleton for the dialogue system as it only needs to have one instance
+
+        /* =================[#]  LIFECYCLE FUNCTIONS  [#]================= */
+
         private void Awake()
         {
-            if (instance != null)
-            {
-                Destroy(instance);
-            }
+            // Create a singleton for the dialogue system as it only needs to have one instance
+            if (Instance != null)
+                Destroy(Instance);
+            Instance = this;
 
-            instance = this;
+            // Initialise the references to the other components
+            dialogueUtils = GetComponent<DialogueUtils>();
+            dialogueTransitions = GetComponent<DialogueTransitions>();
         }
-        public static DialogueSystem Instance => instance;
+
+        private void Update()
+        {
+            if (!isPrinting && isEngaged)
+            {
+                if (Input.GetKeyDown(KeyCode.E) && dialogueTransitions.ReadyToProceed)
+                {
+                    // TODO: Play the dialogue proceed sfx
+
+                    // Run it again if it has not finished the list of dialogue lines yet
+                    if (lineIteration < dialogueLines.Count) PrintDialogue();
+                    // Exit the dialogue if it has finished on the last line
+                    else if (lineIteration >= dialogueLines.Count)
+                    {
+                        isEngaged = false;
+                        dialogueText.text = "";
+                        dialogueTransitions.ExitDialogue();
+                    }
+                }
+            }
+        }
+
+        /* =================[#]  PUBLIC DIALOGUE SYSTEM API  [#]================= */
 
         /// <summary>
         /// Saves the contents of the passed-through TextAsset to a list and begins the transition for the dialogue graphics.
@@ -77,8 +135,8 @@ namespace Mitchel.DialogueSystem
         /// <param name="dialogueBundle">The text file to be read from and printed to the dialogue system.</param>
         public void InitiateDialogue(TextAsset dialogueBundle)
         {
-            DialogueEngaged = true;
-            GoodToGo = true;
+            isEngaged = true;
+            isHalted = false;
             dialogueText.text = "";
             //dialogueHeader.text = "";
             dialoguePromptImage.enabled = false;
@@ -101,33 +159,6 @@ namespace Mitchel.DialogueSystem
         public void PrintDialogue()
         {
             StartCoroutine(StartDialoguePrinting());
-        }
-
-        // Update is called once per frame
-        void Update()
-        {
-            if (!isPrinting && DialogueEngaged)
-            {
-                if (Input.GetKeyDown(KeyCode.E) && dialogueTransitions.ReadyToProceed)
-                {
-                    // TODO: Play the dialogue proceed sfx
-
-                    // Run it again if it has not finished the list of dialogue lines yet
-                    if (lineIteration < dialogueLines.Count) PrintDialogue();
-                    // Exit the dialogue if it has finished on the last line
-                    else if (lineIteration >= dialogueLines.Count)
-                    {
-                        DialogueEngaged = false;
-                        dialogueText.text = "";
-                        dialogueTransitions.ExitDialogue();
-                    }
-                }
-            }
-            else if (isPrinting)
-            {
-                // Sets to true so that the system checks this and then skips the printing
-                if (Input.GetKeyDown(KeyCode.E)) skipCheck = true;
-            }
         }
 
         private void CheckInlineArguments()
@@ -153,13 +184,10 @@ namespace Mitchel.DialogueSystem
 
             // If another inline argument comes right after, re-run the function.
             if (dialogueLines[lineIteration][lineCharIndex] == '[')
-            {
-                //Debug.Log("Re-running inline arguments check");
                 CheckInlineArguments();
-            }
-
-            //Debug.Log("Inline arguments check complete");
         }
+
+        /* =================[#]  SEQUENCE COROUTINES  [#]================= */
 
         private IEnumerator StartDialoguePrinting()
         {
@@ -170,10 +198,10 @@ namespace Mitchel.DialogueSystem
             dialogueText.text = "";
             dialoguePromptImage.enabled = false;
 
-            while (!GoodToGo) yield return null;
+            while (isHalted) yield return null;
 
             // Setting up the sound effect clip and timing for character printing.
-            dialogueSfxSource.clip = DialogueCharSfx;
+            dialogueSfxSource.clip = dialogueCharSfx;
             if (isFixedSfxTiming)
                 StartCoroutine(PlaySFXFixed());
 
@@ -219,20 +247,23 @@ namespace Mitchel.DialogueSystem
 
                 // Pause the dialogue for sentence-ending punctuation.
                 // Note the "is, or" instead of multiple "||"
-                if (c is '.' or '?' or '!' && pauseAtFullStop && (i != dialogueLines[lineIteration].Length - 1 &&
-                                                                  dialogueLines[lineIteration][i] != '<'))
+                if (c is '.' or '?' or '!' 
+                    && pauseAtFullStop 
+                    && i != dialogueLines[lineIteration].Length - 1 
+                    && dialogueLines[lineIteration][i] != '<')
                     yield return new WaitForSeconds(fullStopPauseTime);
                 // Pause the dialogue system for a separate time for commas.
-                else if (c == ',' && pauseAtComma && (i != dialogueLines[lineIteration].Length - 1 &&
-                                                      dialogueLines[lineIteration][i] != '<'))
+                else if (c == ',' 
+                         && pauseAtComma 
+                         && i != dialogueLines[lineIteration].Length - 1 
+                         && dialogueLines[lineIteration][i] != '<')
                     yield return new WaitForSeconds(commaPauseTime);
 
-                yield return new WaitForSeconds(CharDelayTime);
+                yield return new WaitForSeconds(CurrentPrintSpeed);
                 if (skipCheck)
                 {
-                    dialogueText.text =
-                        dialogueLines
-                            [lineIteration]; // TODO: Set this up properly once inline argument parsing is implemented
+                    // TODO: Set this up properly once inline argument parsing is implemented
+                    dialogueText.text = dialogueLines[lineIteration]; 
                     break;
                 }
             }
@@ -250,6 +281,18 @@ namespace Mitchel.DialogueSystem
                 // TODO: Pay the dialogue character type sound
                 yield return new WaitForSeconds(fixedSfxTiming);
             }
+        }
+
+        /* =================[#]  INPUT SYSTEM HOOKS  [#]================= */
+
+        /// <summary>
+        /// Handler for the Skip/Proceed input action for proceeding the dialogue.
+        /// Intended for use by the PlayerInput component.
+        /// </summary>
+        public void OnProceed(InputAction.CallbackContext context)
+        {
+            if (context.performed && isPrinting)
+                skipCheck = true;
         }
     }
 }
